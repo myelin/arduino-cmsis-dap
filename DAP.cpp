@@ -426,6 +426,39 @@ static uint32_t DAP_SWD_Configure(uint8_t *request, uint8_t *response) {
 }
 #endif
 
+// Process SWD Sequence command and prepare response
+//   request:  pointer to request data
+//   response: pointer to response data
+//   return:   number of bytes in response
+#if (DAP_SWD != 0)
+static uint32_t DAP_SWD_Sequence(uint8_t *request, uint8_t *response) {
+  uint32_t sequence_info;
+  uint32_t sequence_count;
+  uint32_t response_count;
+  uint32_t count;
+
+  *response++ = DAP_OK;
+  response_count = 1;
+
+  sequence_count = *request++;
+  while (sequence_count--) {
+    sequence_info = *request++;
+    count = sequence_info & SWD_SEQUENCE_TCK;
+    if (count == 0) count = 64;
+    count = (count + 7) / 8;
+    if (sequence_info & SWD_SEQUENCE_MODE_INPUT) {
+      SWD_Sequence(sequence_info, response);
+      response += count;
+      response_count += count;
+    } else {
+      SWD_Sequence(sequence_info, request);
+      request += count;
+    }
+  }
+
+  return (response_count);
+}
+#endif
 
 // Process SWD Abort command and prepare response
 //   request:  pointer to request data
@@ -1247,8 +1280,14 @@ uint32_t DAP_ProcessCommand(uint8_t *request, uint8_t *response) {
     case ID_DAP_SWD_Configure:
       num = DAP_SWD_Configure(request, response);
       break;
+    case ID_DAP_SWD_Sequence:
+      num = DAP_SWD_Sequence(request, response);
+      break;
 #else
     case ID_DAP_SWD_Configure:
+      *response = DAP_ERROR;
+      return (2);
+    case ID_DAP_SWD_Sequence:
       *response = DAP_ERROR;
       return (2);
 #endif

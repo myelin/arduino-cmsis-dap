@@ -37,6 +37,7 @@
 #define ID_DAP_JTAG_Sequence            0x14
 #define ID_DAP_JTAG_Configure           0x15
 #define ID_DAP_JTAG_IDCODE              0x16
+#define ID_DAP_SWD_Sequence             0x1D
 
 // DAP Vendor Command IDs
 #define ID_DAP_Vendor0                  0x80
@@ -122,6 +123,8 @@
 #define DAP_TRANSFER_ERROR              (1<<3)
 #define DAP_TRANSFER_MISMATCH           (1<<4)
 
+#define SWD_SEQUENCE_TCK                0x3F    // TCK count
+#define SWD_SEQUENCE_MODE_INPUT         0x80
 
 // Debug Port Register Addresses
 #define DP_IDCODE                       0x00    // IDCODE Register (SW Read only)
@@ -190,6 +193,7 @@ extern uint32_t JTAG_ReadIDCode (void);
 extern void     JTAG_WriteAbort (uint32_t data);
 extern uint8_t  JTAG_Transfer   (uint32_t request, uint32_t *data);
 extern uint8_t  SWD_Transfer    (uint32_t request, uint32_t *data);
+extern void     SWD_Sequence    (uint32_t request, uint8_t *data);
 
 extern void     Delayms         (uint32_t delay);
 
