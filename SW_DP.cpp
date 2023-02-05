@@ -205,13 +205,52 @@ uint8_t SWD_Transfer##speed (uint32_t request, uint32_t *data) {                
 }
 
 
+// SWD Sequence I/O
+//   request: bit 7: mode 0=output 1=input
+//            bis 5..0: TCK cycles
+//   data:    data, which will be transmitted/received LSB-first.
+#define SWD_SequenceFunction(speed)     /**/                                    \
+void SWD_Sequence##speed (uint32_t request, uint8_t *data) {                    \
+  int mode_input = request & SWD_SEQUENCE_MODE_INPUT;                           \
+  int cnt = request & SWD_SEQUENCE_TCK;                                         \
+  if (cnt == 0) cnt = 64;                                                       \
+  if (!mode_input) {                                                            \
+    while (cnt > 0) {                                                           \
+      uint8_t val = *data;                                                      \
+      for (int i=0; (i < 8) && (cnt > 0); i++) {                                \
+        SW_WRITE_BIT(val);                                                      \
+        val >>= 1;                                                              \
+        cnt--;                                                                  \
+      }                                                                         \
+      data++;                                                                   \
+    }                                                                           \
+  } else {                                                                      \
+    PIN_SWDIO_OUT_DISABLE();                                                    \
+    while (cnt > 0) {                                                           \
+      uint8_t val = 0;                                                          \
+      for (int i=0; (i < 8) && (cnt > 0); i++) {                                \
+        int bit;                                                                \
+        SW_READ_BIT(bit);                                                       \
+        val |= (!!bit) << i;                                                    \
+        cnt--;                                                                  \
+      }                                                                         \
+      *data = val;                                                              \
+      data++;                                                                   \
+    }                                                                           \
+    PIN_SWDIO_OUT_ENABLE();                                                     \
+  }                                                                             \
+}
+
+
 #undef  PIN_DELAY
 #define PIN_DELAY() PIN_DELAY_FAST()
 SWD_TransferFunction(Fast);
+SWD_SequenceFunction(Fast);
 
 #undef  PIN_DELAY
 #define PIN_DELAY() PIN_DELAY_SLOW(DAP_Data.clock_delay)
 SWD_TransferFunction(Slow);
+SWD_SequenceFunction(Slow);
 
 
 // SWD Transfer I/O
@@ -226,5 +265,16 @@ uint8_t  SWD_Transfer(uint32_t request, uint32_t *data) {
   }
 }
 
+// SWD Sequence I/O
+//   request: bit 7: mode 0=output 1=input
+//            bis 5..0: TCK cycles
+//   data:    data, which will be transmitted/received LSB-first.
+void  SWD_Sequence(uint32_t request, uint8_t *data) {
+  if (DAP_Data.fast_clock) {
+    SWD_SequenceFast(request, data);
+  } else {
+    SWD_SequenceSlow(request, data);
+  }
+}
 
 #endif  /* (DAP_SWD != 0) */
